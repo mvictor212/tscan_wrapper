@@ -1,17 +1,17 @@
-#!/bin/sh
+#!/bin/bash
 
 # Run TargetScan's base script (targetscan_60.pl) on all seed files.
 #
-# Author: Fabian Schmich (fabian.schmich@bsse.ethz.ch)
+# Authors: Fabian Schmich (fabian.schmich@bsse.ethz.ch) and Mason Victors (mason.victors@recursionpharma.com)
 #
 
-SEEDS_DIR="/path/to/seeds"
-TS_UTRSEQ="./data/hg19_ucsc_3p.txt"
-TSCAN_60="/path/to/targetscan_60.pl"
-OUT_DIR="/path/to/tscan60"
+SEEDS_DIR="$1"
+TS_UTRSEQ="$2"
+OUT_DIR="$3"
+TSCAN=$(which targetscan_70.pl)
 
 for s in $SEEDS_DIR/*.txt
 do
 	bname=$(basename $s)
-	perl $TSCAN_60 $s $TS_UTRSEQ $OUT_DIR/tscan.$bname
+	perl $TSCAN $s $TS_UTRSEQ $OUT_DIR/tscan.$bname
 done
