@@ -63,6 +63,18 @@ if __name__ == '__main__':
 
     siRNAs = pd.DataFrame.from_csv(args.siRNA_file, index_col=False)
     siRNAs.index.name = 'SparseSiRNAID'
+    ln = len(gene_dict)
+    for geneID, geneName in zip(siRNAs.geneID, siRNAs.gene):
+        if geneID not in gene_dict:
+            gene_dict[geneID] = ln
+            genes = pd.concat([genes, pd.DataFrame({'GeneID': int(geneID),
+                                                    'GeneName': geneName,
+                                                    'GeneSynonyms': '-',
+                                                    'GeneSynonymsSplit':
+                                                    [['-']]},
+                                                   index=[int(ln)])])
+            ln += 1
+    gene_dict = dict(zip(genes.GeneID, genes.index))
 
     sparse_mat = dok_matrix((len(siRNAs), len(genes)), dtype=np.float32)
     for si, si_id, gn_id in zip(siRNAs.siRNAID, siRNAs.index, siRNAs.geneID):
