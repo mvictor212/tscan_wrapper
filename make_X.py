@@ -84,7 +84,7 @@ if __name__ == '__main__':
                           si_id,
                           gene_dict)
         for k, v in di.iteritems():
-            sparse_mat[k[0], k[1]] = v
+            sparse_mat[k[0], k[1]] = max(1. - (2 ** v), 0.0)
         sparse_mat[si_id, gene_dict[gn_id]] = 0.75
     csr_mat = sparse_mat.tocsr()
 
