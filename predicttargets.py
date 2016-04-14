@@ -175,13 +175,13 @@ def write_target_frame(si_id, seq, tscan_outdir, utr_file,
     if translation_dict is None:
         translation_dict = get_translation_dict(ref_seq_file)
 
-    target_frame = parse(transcript_dict, translation_dict)
+    target_frame = get_targets(transcript_dict, translation_dict)
 
-    out_fname = os.path.join(outdir, '%s.tsv' % args.id)
+    out_fname = os.path.join(outdir, '%s.tsv' % si_id)
     target_frame.to_csv(out_fname, sep='\t', index=False)
     for f in [mat_seq_file, ts_pred_file, contextplus_score_file]:
         os.remove(f)
-    return target_frame['GeneID', 'GeneName', 'GeneSynonyms'].drop_duplicates()
+    return target_frame[['GeneID', 'GeneName', 'GeneSynonyms']].drop_duplicates()
 
 
 if __name__ == "__main__":
