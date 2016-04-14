@@ -129,7 +129,8 @@ def get_translation_dict(ref_seq_file):
 
 def get_transcript_dict(csfile):
     df = pd.DataFrame.from_csv(csfile, sep='\t', index_col=False)
-    transcripts = {k: v['context+ score'].values.tolist()
+    df = df[df['context+ score'] != 'too_close']
+    transcripts = {k: map(float, v['context+ score'].values)
                    for k, v in df.groupby('Gene ID')}
     return transcripts
 
