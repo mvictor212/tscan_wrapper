@@ -86,7 +86,7 @@ if __name__ == '__main__':
         for k, v in di.iteritems():
             sparse_mat[k[0], k[1]] = v
         sparse_mat[si_id, gene_dict[gn_id]] = 0.75
-    csr_mat = sparse_mat.to_csr()
+    csr_mat = sparse_mat.tocsr()
 
     sparse_outfile = os.path.join(args.outdir, 'X.csr')
     genes_outfile = os.path.join(args.outdir, 'genes.csv')
