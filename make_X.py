@@ -25,7 +25,7 @@ def load_sparse_csr(fname):
 
 
 def sparsify_cps(cpsfile, si_id, gene_dict):
-    df = pd.DataFrame.from_csv(cpsfile, index_col=False)
+    df = pd.DataFrame.from_csv(cpsfile, sep='\t', index_col=False)
     return {(si_id, gene_dict[gn]): score
             for gn, score in zip(df.GeneID, df.CPSmean)}
 
