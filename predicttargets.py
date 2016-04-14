@@ -89,7 +89,6 @@ def prepare(sirna_id, sirna_seq, targetscan_60_outdir, species="9606"):
                                                       delete=False)
     seed_filename = os.path.join(targetscan_60_outdir,
                                  'tscan.%s.tsv' % sirna_seq[1:8])
-    print sirna_seq[1:8]
     with open(seed_filename, "r") as seedsf:
         ts_predictions_file.write(seedsf.readline())  # header
         for line in seedsf:
@@ -108,7 +107,6 @@ def predict(mat_seq_file_name, ts_pred_file_name, utr_file):
     contextplus_score_file.close()
     olddir = os.getcwd()
     os.chdir(CS_SCRIPT_DIR)
-    print mat_seq_file_name, ts_pred_file_name, cps_fname, utr_file, CS_SCRIPT
     from subprocess import call
     call([CS_SCRIPT, mat_seq_file_name, utr_file,
           ts_pred_file_name, cps_fname])
@@ -168,7 +166,6 @@ def get_targets(transcript_dict, translation_dict):
 def write_target_frame(si_id, seq, tscan_outdir, utr_file,
                        outdir, ref_seq_file=None,
                        translation_dict=None):
-    print si_id, seq
     mat_seq_file, ts_pred_file = prepare(si_id, seq, tscan_outdir)
 
     # Predict context plus scores
