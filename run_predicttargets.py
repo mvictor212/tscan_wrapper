@@ -41,11 +41,11 @@ if __name__ == '__main__':
     df = pd.DataFrame.from_csv(args.siRNA_file, index_col=False)
 
     def foo(tup):
-        pt.write_target_frame(tup[0], tup[1],
-                              args.tscan_outdir,
-                              args.utr_file,
-                              args.outdir,
-                              translation_dict=translation_dict)
+        return pt.write_target_frame(tup[0], tup[1],
+                                     args.tscan_outdir,
+                                     args.utr_file,
+                                     args.outdir,
+                                     translation_dict=translation_dict)
 
     genes = pd.DataFrame(columns=['GeneID', 'GeneName', 'GeneSynonyms'])
     if args.n_workers == 1:
