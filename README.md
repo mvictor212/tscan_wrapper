@@ -8,14 +8,25 @@ The following steps will guide you through a set scripts used for the prediction
 
    This script creates one file for each n-mer seed sequence, suitable for input to TargetScan's targetscan_60.pl input script
 
-2. Predict all seed matches running script "targetscan_60.sh".
+2. Predict all seed matches running script "targetscan_60.py".
 
    This script loops over all seeds created in step 1. For consecutive predictions, i.e. for multiple libraries, step 1 and 2 only need to be done once. We have provided a file containing the 3' UTR sequences with with removed gaps for hg19 in the ./data folder.
 
 3. Predict the context+ scores for all matches found in step 2 running script "run_predicttargets.py".
 
-   This script should read your siRNA library file and loop over siRNA IDs and antisense sequences. As an example, we included three calls to siRNAs from Ambion.
+   This script should take your results from step 2 and calculate the context+ score for each gene for each file produced by step 2 (corresponding to the seeds).
 
 4. Construct the siRNA-to-gene target relation matrix from all context+ score predictions in step 3 running script "make_X.sh".
 
-   This script creates a sparse scipy matrix and saves it to disk. As input, in addition to the context+ score predictions from step 3, it requires a file containing all siRNA IDs and all gene IDs, respectively. For the Ambion example, we provided the file with siRNA IDs and gene IDs in the ./data folder.
+   This script creates a percent knockdown csv for all seeds generated and all genes, appending any missing critical genes.
+
+
+Example:
+
+`mkdir data/seeds`
+`mkdir data/tscanout`
+`mkdir data/cpscores`
+`python make_seeds.py data/seeds`
+`python targetscan_60.py --utr-seq-file data/hg19_ucsc_3p.tsv --seeds-directory data/seeds --out-directory data/tscanout --n-workers 10`
+`python run_predicttargets.py --tscan-outdir data/tscanout --utr-file data/hg19_ucsc_3p.tsv --ta-sps-file data/TA_SPS_by_seed_region.txt --ref-seq-file data/refseq.tsv --n-workers 10 --outdir data/cpscores`
+`python make_X.py --cps-dir data/cpscores --outdir data --critical-genes data/critical_genes.csv`

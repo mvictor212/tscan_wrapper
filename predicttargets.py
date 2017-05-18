@@ -69,7 +69,7 @@ class Target:
 # Takes an siRNAs and produces the input files required by context_score
 # script, "miRNA file" and "PredictedTargets" file by matching the sRNA
 # seed to pre-scanned seeds.
-def prepare(sirna_id, sirna_seq, targetscan_60_outdir, species="9606"):
+def prepare(seq, targetscan_60_outdir, species="9606"):
     # Mature sequence file
     mature_sequence_file = tempfile.NamedTemporaryFile("w",
                                                        prefix="seq_",
@@ -78,40 +78,42 @@ def prepare(sirna_id, sirna_seq, targetscan_60_outdir, species="9606"):
                                           "Species_ID",
                                           "MiRBase_ID",
                                           "Mature_sequence"]) + "\n")
-    mature_sequence_file.write("\t".join([sirna_id,
+    mature_sequence_file.write("\t".join([seq,
                                           str(species),
-                                          sirna_id,
-                                          sirna_seq]) + "\n")
+                                          seq,
+                                          seq]) + "\n")
     mature_sequence_file.close()
     # Seed predictions file
     ts_predictions_file = tempfile.NamedTemporaryFile("w",
                                                       prefix="targets_",
                                                       delete=False)
     seed_filename = os.path.join(targetscan_60_outdir,
-                                 'tscan.%s.tsv' % sirna_seq[1:8])
+                                 'tscan.%s.tsv' % seq)
     with open(seed_filename, "r") as seedsf:
         ts_predictions_file.write(seedsf.readline())  # header
         for line in seedsf:
             lsp = line.split("\t")
-            lsp[1] = sirna_id
+            lsp[1] = seq
             ts_predictions_file.write("\t".join(lsp))
     ts_predictions_file.close()
     return(mature_sequence_file.name, ts_predictions_file.name)
 
 
-def predict(mat_seq_file_name, ts_pred_file_name, utr_file):
+def predict(mat_seq_file_name, ts_pred_file_name, utr_file,
+            ta_sps_file_name):
     contextplus_score_file = tempfile.NamedTemporaryFile("w",
                                                          prefix="cps_",
                                                          delete=True)
     cps_fname = contextplus_score_file.name
     contextplus_score_file.close()
     olddir = os.getcwd()
-    os.chdir(CS_SCRIPT_DIR)
+    #os.chdir(CS_SCRIPT_DIR)
+    #ta_sps_fname = os.path.join(os.getcwd(), 'TA_SPS_by_seed_region.txt')
     from subprocess import call
     call([CS_SCRIPT, mat_seq_file_name, utr_file,
-          ts_pred_file_name, cps_fname])
+          ts_pred_file_name, cps_fname, ta_sps_file_name])
     os.chdir(olddir)
-    return (cps_fname)
+    return cps_fname
 
 
 def get_translation_dict(ref_seq_file):
@@ -129,7 +131,8 @@ def get_translation_dict(ref_seq_file):
 
 def get_transcript_dict(csfile):
     df = pd.DataFrame.from_csv(csfile, sep='\t', index_col=False)
-    df = df[df['context+ score'] != 'too_close']
+    if df.dtypes['context+ score'] == 'O':
+        df = df[df['context+ score'] != 'too_close']
     transcripts = {k: map(float, v['context+ score'].values)
                    for k, v in df.groupby('Gene ID')}
     return transcripts
@@ -154,7 +157,8 @@ def get_targets(transcript_dict, translation_dict):
                     curgene.transcripts = [trname]
                     targets.append(curgene)
         else:
-            print("WARN: cannot translate transcript %s" % trname)
+            pass
+            #print("WARN: cannot translate transcript %s" % trname)
     target_frame = pd.DataFrame([target.strextd().split('\t')
                                  for target in targets],
                                 columns=['GeneID', 'GeneName',
@@ -164,54 +168,25 @@ def get_targets(transcript_dict, translation_dict):
     return target_frame
 
 
-def write_target_frame(si_id, seq, tscan_outdir, utr_file,
+def write_target_frame(seq, tscan_outdir, utr_file, ta_sps_file_name,
                        outdir, ref_seq_file=None,
                        translation_dict=None):
-    mat_seq_file, ts_pred_file = prepare(si_id, seq, tscan_outdir)
+    print("Processing Seed Sequence: %s" % seq)
+    out_fname = os.path.join(outdir, '%s.tsv' % seq)
+    if os.path.isfile(out_fname):
+        return None
+    mat_seq_file, ts_pred_file = prepare(seq, tscan_outdir)
 
     # Predict context plus scores
-    contextplus_score_file = predict(mat_seq_file, ts_pred_file, utr_file)
+    contextplus_score_file = predict(mat_seq_file, ts_pred_file, utr_file,
+                                     ta_sps_file_name)
     transcript_dict = get_transcript_dict(contextplus_score_file)
     if translation_dict is None:
         translation_dict = get_translation_dict(ref_seq_file)
 
     target_frame = get_targets(transcript_dict, translation_dict)
 
-    out_fname = os.path.join(outdir, '%s.tsv' % si_id)
     target_frame.to_csv(out_fname, sep='\t', index=False)
     for f in [mat_seq_file, ts_pred_file, contextplus_score_file]:
         os.remove(f)
     return target_frame[['GeneID', 'GeneName', 'GeneSynonyms']].drop_duplicates()
-
-
-if __name__ == "__main__":
-    import argparse
-    parser = argparse.ArgumentParser()
-    parser.add_argument('--id', help='siRNA identifier',
-                        type=str)
-    parser.add_argument('--seq',
-                        help='siRNA antisense sequence w/o overhangs',
-                        type=str)
-    parser.add_argument('--tscan-outdir',
-                        help='targetscan_60.pl output filepath',
-                        type=str)
-    parser.add_argument('--utr-file', help='UTR Seq filepath',
-                        type=str)
-    parser.add_argument('--ref-seq-file',
-                        help='Reference file for transcript to gene lookup',
-                        type=str)
-    parser.add_argument('--outdir', help='Output directory filepath',
-                        type=str)
-
-    args = parser.parse_args()
-    missing = (args.id is None or
-               args.seq is None or
-               args.tscan_outdir is None or
-               args.utr_file is None or
-               args.ref_seq_file is None or
-               args.outdir is None)
-    if missing:
-        raise ValueError("Missing arguments")
-
-    write_target_frame(args.id, args.seq, args.tscan_outdir,
-                       args.utr_file, args.outdir, args.ref_seq_file)

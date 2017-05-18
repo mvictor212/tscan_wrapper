@@ -36,62 +36,43 @@ if __name__ == '__main__':
     parser.add_argument('--cps-dir',
                         help='Context+ Score Predictions directory',
                         type=str)
-    parser.add_argument('--siRNA-file', help='File path to siRNA data (CSV)',
-                        type=str)
-    parser.add_argument('--gene-file', help='File path to gene list (CSV)',
-                        type=str)
-    parser.add_argument('--on-target-effect',
-                        help='Target prediction for on-target effects',
-                        type=float, default=0.75)
     parser.add_argument('--outdir', help='Output directory filepath',
+                        type=str)
+    parser.add_argument('--critical-genes', help='Path to csv of critical entrez gene ids',
                         type=str)
 
     args = parser.parse_args()
     missing = (args.cps_dir is None or
-               args.siRNA_file is None or
-               args.gene_file is None or
-               args.outdir is None)
+               args.outdir is None or
+               args.critical_genes is None)
     if missing:
         raise ValueError("Missing arguments")
 
-    genes = pd.DataFrame.from_csv(args.gene_file, index_col=False)
-    genes['GeneSynonymsSplit'] = (genes
-                                  .GeneSynonyms
-                                  .apply(lambda x: x.split(';')))
-    genes.index.name = 'SparseGeneID'
-    gene_dict = dict(zip(genes.GeneID, genes.index))
+    critical_genes = pd.DataFrame.from_csv(args.critical_genes, index_col=None)
+    target_relations_dict = {}
+    for i, seq in enumerate(os.listdir(args.cps_dir)):
+        if (i % 1000) == 0:
+            print("Iteration: %d" % i)
+        df = pd.DataFrame.from_csv(os.path.join(args.cps_dir, seq),
+                                   sep='\t', index_col=0)
+        try:
+            target_relations_dict[seq.split('.')[0]] = df.CPSmean.apply(lambda x: max(1 - 2 ** x, 0.))
+        except:
+            print(df.columns)
+            print(seq)
 
-    siRNAs = pd.DataFrame.from_csv(args.siRNA_file, index_col=False)
-    siRNAs.index.name = 'SparseSiRNAID'
-    ln = len(gene_dict)
-    for geneID, geneName in zip(siRNAs.geneID, siRNAs.gene):
-        if geneID not in gene_dict:
-            gene_dict[geneID] = ln
-            genes = pd.concat([genes, pd.DataFrame({'GeneID': int(geneID),
-                                                    'GeneName': geneName,
-                                                    'GeneSynonyms': '-',
-                                                    'GeneSynonymsSplit':
-                                                    [['-']]},
-                                                   index=[int(ln)])])
-            ln += 1
-    gene_dict = dict(zip(genes.GeneID, genes.index))
-
-    sparse_mat = dok_matrix((len(siRNAs), len(genes)), dtype=np.float32)
-    for si, si_id, gn_id in zip(siRNAs.siRNAID, siRNAs.index, siRNAs.geneID):
-        siRNA_fname = os.path.join(args.cps_dir,
-                                   '%s.tsv' % si)
-        di = sparsify_cps(siRNA_fname,
-                          si_id,
-                          gene_dict)
-        for k, v in di.iteritems():
-            sparse_mat[k[0], k[1]] = max(1. - (2 ** v), 0.0)
-        sparse_mat[si_id, gene_dict[gn_id]] = 0.75
-    csr_mat = sparse_mat.tocsr()
-
-    sparse_outfile = os.path.join(args.outdir, 'X.csr')
-    genes_outfile = os.path.join(args.outdir, 'genes.csv')
-    siRNAs_outfile = os.path.join(args.outdir, 'siRNAs.csv')
-
-    save_sparse_csr(sparse_outfile, csr_mat)
-    genes.to_csv(genes_outfile, index=True)
-    siRNAs.to_csv(siRNAs_outfile, index=True)
+    target_relations_df = pd.DataFrame(target_relations_dict).T
+    target_relations_df.fillna(0., inplace=True)
+    target_relations_df.index.name = 'entrez_gene_id'
+    target_relations_df.to_csv(os.path.join(args.outdir, 'seed_by_gene.csv'))
+    missing_genes = list(set(critical_genes
+                             .entrez_gene_id
+                             .values
+                             .astype(int))
+                         .difference(set(target_relations_df
+                                         .columns
+                                         .astype(int))))
+    missing_genes_df = pd.DataFrame(0, columns=missing_genes,
+                                    index=target_relations_df.index)
+    target_relations_df = pd.concat([target_relations_df, missing_genes_df], axis=1)
+    target_relations_df.to_csv(os.path.join(args.outdir, 'seed_by_gene_extended.csv'))
