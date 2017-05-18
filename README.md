@@ -23,10 +23,10 @@ The following steps will guide you through a set scripts used for the prediction
 
 Example:
 
-`mkdir data/seeds`
-`mkdir data/tscanout`
-`mkdir data/cpscores`
-`python make_seeds.py data/seeds`
-`python targetscan_60.py --utr-seq-file data/hg19_ucsc_3p.tsv --seeds-directory data/seeds --out-directory data/tscanout --n-workers 10`
-`python run_predicttargets.py --tscan-outdir data/tscanout --utr-file data/hg19_ucsc_3p.tsv --ta-sps-file data/TA_SPS_by_seed_region.txt --ref-seq-file data/refseq.tsv --n-workers 10 --outdir data/cpscores`
-`python make_X.py --cps-dir data/cpscores --outdir data --critical-genes data/critical_genes.csv`
+```mkdir data/seeds
+mkdir data/tscanout
+mkdir data/cpscores
+python make_seeds.py data/seeds
+python targetscan_60.py --utr-seq-file data/hg19_ucsc_3p.tsv --seeds-directory data/seeds --out-directory data/tscanout --n-workers 10
+python run_predicttargets.py --tscan-outdir data/tscanout --utr-file data/hg19_ucsc_3p.tsv --ta-sps-file data/TA_SPS_by_seed_region.txt --ref-seq-file data/refseq.tsv --n-workers 10 --outdir data/cpscores
+python make_X.py --cps-dir data/cpscores --outdir data --critical-genes data/critical_genes.csv
