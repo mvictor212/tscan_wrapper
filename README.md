@@ -16,7 +16,7 @@ The following steps will guide you through a set scripts used for the prediction
 
    This script should take your results from step 2 and calculate the context+ score for each gene for each file produced by step 2 (corresponding to the seeds).
 
-4. Construct the siRNA-to-gene target relation matrix from all context+ score predictions in step 3 running script "make_X.sh".
+4. Construct the siRNA-to-gene target relation matrix from all context+ score predictions in step 3 running script "make_X.py".
 
    This script creates a percent knockdown csv for all seeds generated and all genes, appending any missing critical genes.
 
